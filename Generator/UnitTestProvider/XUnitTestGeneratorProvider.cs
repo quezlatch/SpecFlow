@@ -18,24 +18,33 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
         private const string TRAIT_ATTRIBUTE = "Xunit.TraitAttribute";
         private const string IUSEFIXTURE_INTERFACE = "Xunit.IUseFixture";
 
-        private CodeTypeDeclaration _currentFixtureDataTypeDeclaration = null;
+        private CodeTypeDeclaration _currentFixtureDataTypeDeclaration;
 
         protected CodeDomHelper CodeDomHelper { get; set; }
 
-        public bool SupportsRowTests { get { return true; } }
-        public bool SupportsAsyncTests { get { return false; } }
+        public bool SupportsRowTests
+        {
+            get { return true; }
+        }
+
+        public bool SupportsAsyncTests
+        {
+            get { return false; }
+        }
 
         public XUnitTestGeneratorProvider(CodeDomHelper codeDomHelper)
         {
             CodeDomHelper = codeDomHelper;
         }
 
-        public void SetTestClass(TestClassGenerationContext generationContext, string featureTitle, string featureDescription)
+        public void SetTestClass(TestClassGenerationContext generationContext, string featureTitle,
+            string featureDescription)
         {
             // xUnit does not use an attribute for the TestFixture, all public classes are potential fixtures
         }
 
-        public void SetTestClassCategories(TestClassGenerationContext generationContext, IEnumerable<string> featureCategories)
+        public void SetTestClassCategories(TestClassGenerationContext generationContext,
+            IEnumerable<string> featureCategories)
         {
             // xUnit does not support caregories
         }
@@ -50,8 +59,9 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
             generationContext.TestClass.Members.Add(_currentFixtureDataTypeDeclaration);
 
             var fixtureDataType =
-                CodeDomHelper.CreateNestedTypeReference(generationContext.TestClass, _currentFixtureDataTypeDeclaration.Name);
-            
+                CodeDomHelper.CreateNestedTypeReference(generationContext.TestClass,
+                    _currentFixtureDataTypeDeclaration.Name);
+
             var useFixtureType = new CodeTypeReference(IUSEFIXTURE_INTERFACE, fixtureDataType);
             CodeDomHelper.SetTypeReferenceAsInterface(useFixtureType);
 
@@ -59,16 +69,13 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
 
             // public void SetFixture(T) { } // explicit interface implementation for generic interfaces does not work with codedom
 
-            CodeMemberMethod setFixtureMethod = new CodeMemberMethod();
-            setFixtureMethod.Attributes = MemberAttributes.Public;
-            setFixtureMethod.Name = "SetFixture";
+            var setFixtureMethod = new CodeMemberMethod {Attributes = MemberAttributes.Public, Name = "SetFixture"};
             setFixtureMethod.Parameters.Add(new CodeParameterDeclarationExpression(fixtureDataType, "fixtureData"));
             setFixtureMethod.ImplementationTypes.Add(useFixtureType);
             generationContext.TestClass.Members.Add(setFixtureMethod);
 
             // public <_currentFixtureTypeDeclaration>() { <fixtureSetupMethod>(); }
-            CodeConstructor ctorMethod = new CodeConstructor();
-            ctorMethod.Attributes = MemberAttributes.Public;
+            var ctorMethod = new CodeConstructor {Attributes = MemberAttributes.Public};
             _currentFixtureDataTypeDeclaration.Members.Add(ctorMethod);
             ctorMethod.Statements.Add(
                 new CodeMethodInvokeExpression(
@@ -82,13 +89,15 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
 
             generationContext.TestClassCleanupMethod.Attributes |= MemberAttributes.Static;
 
-            _currentFixtureDataTypeDeclaration.BaseTypes.Add(typeof(IDisposable));
+            _currentFixtureDataTypeDeclaration.BaseTypes.Add(typeof (IDisposable));
 
             // void IDisposable.Dispose() { <fixtureTearDownMethod>(); }
 
-            CodeMemberMethod disposeMethod = new CodeMemberMethod();
-            disposeMethod.PrivateImplementationType = new CodeTypeReference(typeof(IDisposable));
-            disposeMethod.Name = "Dispose";
+            var disposeMethod = new CodeMemberMethod
+            {
+                PrivateImplementationType = new CodeTypeReference(typeof (IDisposable)),
+                Name = "Dispose"
+            };
             _currentFixtureDataTypeDeclaration.Members.Add(disposeMethod);
 
             disposeMethod.Statements.Add(
@@ -97,7 +106,8 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
                     generationContext.TestClassCleanupMethod.Name));
         }
 
-        public void SetTestMethod(TestClassGenerationContext generationContext, CodeMemberMethod testMethod, string scenarioTitle)
+        public void SetTestMethod(TestClassGenerationContext generationContext, CodeMemberMethod testMethod,
+            string scenarioTitle)
         {
             CodeDomHelper.AddAttribute(testMethod, FACT_ATTRIBUTE);
 
@@ -105,7 +115,8 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
             SetDescription(testMethod, scenarioTitle);
         }
 
-        public void SetRowTest(TestClassGenerationContext generationContext, CodeMemberMethod testMethod, string scenarioTitle)
+        public void SetRowTest(TestClassGenerationContext generationContext, CodeMemberMethod testMethod,
+            string scenarioTitle)
         {
             CodeDomHelper.AddAttribute(testMethod, THEORY_ATTRIBUTE);
 
@@ -113,23 +124,26 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
             SetDescription(testMethod, scenarioTitle);
         }
 
-        public void SetRow(TestClassGenerationContext generationContext, CodeMemberMethod testMethod, IEnumerable<string> arguments, IEnumerable<string> tags, bool isIgnored)
+        public void SetRow(TestClassGenerationContext generationContext, CodeMemberMethod testMethod,
+            IEnumerable<string> arguments, IEnumerable<string> tags, bool isIgnored)
         {
             //TODO: better handle "ignored"
             if (isIgnored)
                 return;
 
             var args = arguments.Select(
-              arg => new CodeAttributeArgument(new CodePrimitiveExpression(arg))).ToList();
+                arg => new CodeAttributeArgument(new CodePrimitiveExpression(arg))).ToList();
 
             args.Add(
                 new CodeAttributeArgument(
-                    new CodeArrayCreateExpression(typeof(string[]), tags.Select(t => new CodePrimitiveExpression(t)).ToArray())));
+                    new CodeArrayCreateExpression(typeof (string[]),
+                        tags.Select(t => new CodePrimitiveExpression(t)).ToArray())));
 
             CodeDomHelper.AddAttribute(testMethod, INLINEDATA_ATTRIBUTE, args.ToArray());
         }
 
-        public void SetTestMethodCategories(TestClassGenerationContext generationContext, CodeMemberMethod testMethod, IEnumerable<string> scenarioCategories)
+        public void SetTestMethodCategories(TestClassGenerationContext generationContext, CodeMemberMethod testMethod,
+            IEnumerable<string> scenarioCategories)
         {
             // xUnit does not support caregories
         }
@@ -140,8 +154,7 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
 
             // public <_currentTestTypeDeclaration>() { <memberMethod>(); }
 
-            CodeConstructor ctorMethod = new CodeConstructor();
-            ctorMethod.Attributes = MemberAttributes.Public;
+            var ctorMethod = new CodeConstructor {Attributes = MemberAttributes.Public};
             generationContext.TestClass.Members.Add(ctorMethod);
 
             ctorMethod.Statements.Add(
@@ -154,13 +167,15 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
         {
             // xUnit supports test tear down through the IDisposable interface
 
-            generationContext.TestClass.BaseTypes.Add(typeof(IDisposable));
+            generationContext.TestClass.BaseTypes.Add(typeof (IDisposable));
 
             // void IDisposable.Dispose() { <memberMethod>(); }
 
-            CodeMemberMethod disposeMethod = new CodeMemberMethod();
-            disposeMethod.PrivateImplementationType = new CodeTypeReference(typeof(IDisposable));
-            disposeMethod.Name = "Dispose";
+            var disposeMethod = new CodeMemberMethod
+            {
+                PrivateImplementationType = new CodeTypeReference(typeof (IDisposable)),
+                Name = "Dispose"
+            };
             generationContext.TestClass.Members.Add(disposeMethod);
 
             disposeMethod.Statements.Add(
@@ -177,16 +192,25 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
         public void SetTestMethodIgnore(TestClassGenerationContext generationContext, CodeMemberMethod testMethod)
         {
             var factAttr = testMethod.CustomAttributes.OfType<CodeAttributeDeclaration>()
-                .FirstOrDefault(codeAttributeDeclaration => codeAttributeDeclaration.Name == FACT_ATTRIBUTE);
+                .FirstOrDefault(IsFactOrTheoryAttribute);
 
             if (factAttr != null)
-            {
-                // set [FactAttribute(Skip="reason")]
-                factAttr.Arguments.Add
-                    (
-                        new CodeAttributeArgument(FACT_ATTRIBUTE_SKIP_PROPERTY_NAME, new CodePrimitiveExpression(SKIP_REASON))
-                    );
-            }
+                SkipFactOrTheory(factAttr);
+        }
+
+        private static void SkipFactOrTheory(CodeAttributeDeclaration factAttr)
+        {
+            factAttr.Arguments.Add
+                (
+                    new CodeAttributeArgument(FACT_ATTRIBUTE_SKIP_PROPERTY_NAME,
+                        new CodePrimitiveExpression(SKIP_REASON))
+                );
+        }
+
+        private static bool IsFactOrTheoryAttribute(CodeAttributeDeclaration codeAttributeDeclaration)
+        {
+            var name = codeAttributeDeclaration.Name;
+            return name == FACT_ATTRIBUTE || name == THEORY_ATTRIBUTE;
         }
 
         private void SetProperty(CodeTypeMember codeTypeMember, string name, string value)
@@ -206,7 +230,9 @@ namespace TechTalk.SpecFlow.Generator.UnitTestProvider
             // by default, doing nothing to the final generated code
         }
 
-        public void SetTestMethodAsRow(TestClassGenerationContext generationContext, CodeMemberMethod testMethod, string scenarioTitle, string exampleSetName, string variantName, IEnumerable<KeyValuePair<string, string>> arguments)
+        public void SetTestMethodAsRow(TestClassGenerationContext generationContext, CodeMemberMethod testMethod,
+            string scenarioTitle, string exampleSetName, string variantName,
+            IEnumerable<KeyValuePair<string, string>> arguments)
         {
             // doing nothing since we support RowTest
         }

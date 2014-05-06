@@ -14,7 +14,7 @@ namespace TechTalk.SpecFlow.Generator
     {
         internal static DefaultDependencyProvider DefaultDependencyProvider = new DefaultDependencyProvider();
 
-        public static IObjectContainer CreateContainer(SpecFlowConfigurationHolder configurationHolder, ProjectSettings projectSettings)
+        public static IObjectContainer CreateContainer(SpecFlowConfigurationHolder configurationHolder, ProjectSettings projectSettings, string generatorUnitTestProvider = null)
         {
             var container = new ObjectContainer();
             container.RegisterInstanceAs(projectSettings);
@@ -47,7 +47,7 @@ namespace TechTalk.SpecFlow.Generator
             container.RegisterInstanceAs(container.Resolve<CodeDomHelper>(projectSettings.ProjectPlatformSettings.Language));
 
             if (specFlowConfiguration.GeneratorConfiguration.GeneratorUnitTestProvider != null)
-                container.RegisterInstanceAs(container.Resolve<IUnitTestGeneratorProvider>(specFlowConfiguration.GeneratorConfiguration.GeneratorUnitTestProvider));
+                container.RegisterInstanceAs(container.Resolve<IUnitTestGeneratorProvider>(generatorUnitTestProvider ?? specFlowConfiguration.GeneratorConfiguration.GeneratorUnitTestProvider));
 
             foreach (var plugin in plugins)
                 plugin.RegisterCustomizations(container, specFlowConfiguration);
