@@ -20,7 +20,8 @@ namespace TechTalk.SpecFlow.GeneratorTests
         [SetUp]
         public void Setup()
         {
-            container = GeneratorContainerBuilder.CreateContainer(new SpecFlowConfigurationHolder(), new ProjectSettings(), generatorUnitTestProvider: "xunit");
+            container = GeneratorContainerBuilder.CreateContainer(new SpecFlowConfigurationHolder(), new ProjectSettings());
+            container.RegisterInstanceAs<IUnitTestGeneratorProvider>(container.Resolve<XUnitTestGeneratorProvider>());
         }
 
         private IFeatureGenerator CreateUnitTestFeatureGenerator()
